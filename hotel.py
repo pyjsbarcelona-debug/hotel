@@ -13,12 +13,12 @@ from aiogram.types import (
     WebAppInfo,
 )
 
-BOT_TOKEN = "8937351582:AAEM5PSJNA3CDY0MY-BsN24JdO6RQEeTUDs"
-ADMIN_IDS = [123456789]
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+ADMIN_IDS = [123456789]  # O'z Telegram ID raqamingizni yozing
 DB_NAME = "hotel_booking.db"
 
-# Replace with your deployed Web App URL (e.g., Vercel, Netlify, or GitHub Pages)
-WEB_APP_URL = "https://pyjsbarcelona-debug.github.io/hotel/"
+# Xostingga joylagan index.html manzilingizni shu yerga yozing
+WEB_APP_URL = "https://your-hosted-webapp-url.com/index.html"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,7 +36,7 @@ async def init_db():
                 check_in_date TEXT,
                 nights INTEGER,
                 total_price REAL,
-                status TEXT DEFAULT 'PENDING',
+                status TEXT DEFAULT 'CONFIRMED',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -63,8 +63,8 @@ dp = Dispatcher()
 def main_menu_kb():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🏨 Open Hotel Mini App", web_app=WebAppInfo(url=WEB_APP_URL))],
-            [InlineKeyboardButton(text="ℹ️ Hotel Info", callback_data="hotel_info")]
+            [InlineKeyboardButton(text="🏨 Mehmonxona Mini App", web_app=WebAppInfo(url=WEB_APP_URL))],
+            [InlineKeyboardButton(text="ℹ️ Mehmonxona haqida", callback_data="hotel_info")]
         ]
     )
 
@@ -72,8 +72,8 @@ def main_menu_kb():
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(
-        f"👋 Welcome to **Grand Luxe Hotel**, {message.from_user.first_name}!\n\n"
-        "Tap the button below to open our booking Mini App:",
+        f"✨ **Grand Luxe Hotel**ga xush kelibsiz, {message.from_user.first_name}!\n\n"
+        "Xona band qilish uchun quyidagi tugmani bosing:",
         reply_markup=main_menu_kb(),
         parse_mode="Markdown"
     )
@@ -82,17 +82,16 @@ async def cmd_start(message: Message):
 @dp.callback_query(F.data == "hotel_info")
 async def process_info(callback: CallbackQuery):
     await callback.message.edit_text(
-        "✨ **Grand Luxe Hotel** ✨\n\n"
-        "📍 **Location**: 77 Luxury Ave, City Center\n"
-        "⭐ **Rating**: 5-Star\n"
-        "🏊‍♂️ **Amenities**: Free Wi-Fi, Pool, Spa, Gym, 24/7 Room Service.",
+        "🌟 **Grand Luxe Hotel Ma'lumotlari**\n\n"
+        "📍 **Manzil**: Markaziy ko'cha, 77-uy\n"
+        "⭐ **Daraja**: 5 Yulduzli\n"
+        "🏊‍♂️ **Qulayliklar**: Bepul Wi-Fi, Basseyn, Spa, Fitnes va 24/7 xizmat.",
         reply_markup=main_menu_kb(),
         parse_mode="Markdown"
     )
     await callback.answer()
 
 
-# --- Handle Data Sent from HTML Mini App ---
 @dp.message(F.web_app_data)
 async def process_web_app_data(message: Message, bot: Bot):
     try:
@@ -105,7 +104,7 @@ async def process_web_app_data(message: Message, bot: Bot):
         nights = int(data.get("nights", 1))
         total_price = float(data.get("total_price", 0))
 
-        # Save to database
+        # Ma'lumotlar bazasiga saqlash
         await save_booking(
             user_id=message.from_user.id,
             full_name=full_name,
@@ -116,54 +115,44 @@ async def process_web_app_data(message: Message, bot: Bot):
             total_price=total_price
         )
 
-        # Confirm to user
+        # Foydalanuvchiga tasdiqnoma yuborish
         await message.answer(
-            "🎉 **Reservation Confirmed via Mini App!**\n\n"
-            f"👤 Guest: {full_name}\n"
-            f"📞 Phone: {phone}\n"
-            f"🏨 Room: {room_type}\n"
-            f"📅 Check-in: {check_in} ({nights} nights)\n"
-            f"💳 Total: ${total_price}\n\n"
-            "Our manager will contact you shortly.",
+            "🎉 **Buyurtmangiz muvaffaqiyatli qabul qilindi!**\n\n"
+            f"👤 Mehmon: `{full_name}`\n"
+            f"📞 Telefon: `{phone}`\n"
+            f"🏨 Xona: `{room_type}`\n"
+            f"📅 Kelish sanasi: `{check_in}` ({nights} kecha)\n"
+            f"💳 Umumiy narx: **${total_price}**\n\n"
+            "Tez orada menejerimiz siz bilan bog'lanadi.",
             reply_markup=main_menu_kb(),
             parse_mode="Markdown"
         )
 
-        # Notify Admin
+        # Adminlarga xabar yuborish
         admin_msg = (
-            "🚨 **NEW MINI APP BOOKING**\n\n"
-            f"👤 Guest: {full_name}\n"
-            f"📞 Phone: {phone}\n"
-            f"🏨 Room: {room_type}\n"
-            f"📅 Date: {check_in} ({nights} nights)\n"
-            f"💰 Total: ${total_price}"
+            "🚨 **YANGI BUYURTMA (Mini App)**\n\n"
+            f"👤 Mehmon: {full_name}\n"
+            f"📞 Tel: {phone}\n"
+            f"🏨 Xona: {room_type}\n"
+            f"📅 Sana: {check_in} ({nights} kecha)\n"
+            f"💰 Narx: ${total_price}"
         )
         for admin_id in ADMIN_IDS:
             try:
                 await bot.send_message(chat_id=admin_id, text=admin_msg, parse_mode="Markdown")
             except Exception as e:
-                logging.error(f"Failed to notify admin: {e}")
+                logging.error(f"Adminni ogohlantirishda xatolik: {e}")
 
     except Exception as e:
-        await message.answer(f"⚠️ Error processing booking data: {e}")
+        await message.answer(f"⚠️ Xatolik yuz berdi: {e}")
 
 
 async def main():
     await init_db()
     bot = Bot(token=BOT_TOKEN)
-    print("🚀 Hotel Bot with Mini App initialized...")
+    print("🚀 Super Hotel Bot ishga tushdi...")
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-print("Press Ctrl+C to exit...")
-
-
-def main():
-    asyncio.run(main())
-
-
-def counter():
-    print("Counter is running...")
